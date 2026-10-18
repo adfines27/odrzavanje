@@ -1,18 +1,11 @@
 // Podaci u memoriji + upis u IndexedDB. Sva brisanja brišu i fotografije.
 
 import * as db from './db.js';
+import { getCatalog, catalogType, setCatalogRecords } from './catalog.js';
 import { uid, parseDate, isoDate, isoDateTime, nowISO, startOfDay, addDays, daysBetween, compareTag, prefs } from './util.js';
 
 // ---------- Šifarnici ----------
 
-export const EQUIPMENT_TYPES = [
-  { id: 'motor', title: 'Motor', icon: 'equipment' },
-  { id: 'pump', title: 'Pumpa', icon: 'drop' },
-  { id: 'vfd', title: 'Frekventni regulator', icon: 'wave' },
-  { id: 'valve', title: 'Ventil', icon: 'valve' },
-  { id: 'instrument', title: 'Instrument', icon: 'gauge' },
-  { id: 'other', title: 'Ostalo', icon: 'wrench' },
-];
 export const REPORT_TYPES = [
   { id: 'preventive', title: 'Preventivno', icon: 'calendarCheck' },
   { id: 'corrective', title: 'Korektivno', icon: 'wrench' },
@@ -34,19 +27,45 @@ export const DUE = {
   ok: { title: 'U redu', icon: 'ok', tone: 'ok' },
 };
 const byId = (list) => (id) => list.find((x) => x.id === id) || list[list.length - 1];
-export const equipmentType = byId(EQUIPMENT_TYPES);
+export const equipmentType = (id) => catalogType(id);
 export const reportType = byId(REPORT_TYPES);
 export const reportStatus = (id) => REPORT_STATUSES.find((x) => x.id === id) || REPORT_STATUSES[0];
 export const photoLabel = byId(PHOTO_LABELS);
 
+const normalizeType = (s) => String(s ?? '').toLowerCase().replace(/đ/g, 'dj').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+
 export function parseEquipmentType(value) {
+  const raw = String(value ?? '').trim();
+  if (getCatalog().some((c) => c.id === raw)) return raw;
   const v = String(value ?? '').toLowerCase().replace(/đ/g, 'dj').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
   if (['motor', 'elektromotor', 'em'].includes(v)) return 'motor';
   if (['pump', 'pumpa'].includes(v)) return 'pump';
   if (['vfd', 'frekventniregulator', 'frekventni', 'regulator', 'pretvarac', 'frekventnipretvarac', 'inverter'].includes(v)) return 'vfd';
   if (['valve', 'ventil', 'zasun', 'slavina'].includes(v)) return 'valve';
   if (['instrument', 'instrumenti', 'merac', 'senzor', 'transmiter'].includes(v)) return 'instrument';
-  return 'other';
+  const aliases = {
+    softstarter: ['softstarter', 'mekiupustac', 'softstart'],
+    actuator: ['actuator', 'aktuator', 'elektromotornipogon', 'pogonventila'],
+    transformer: ['transformer', 'transformator', 'trafo', 'energetskitransformator'],
+    switchgear: ['switchgear', 'snpostrojenje', 'srednjinapon', 'celija', 'celije', 'snrazvod', 'postrojenje'],
+    lvpanel: ['lvpanel', 'nnormar', 'razvodniormar', 'razvodnatabla', 'nnrazvod', 'ormar', 'razvod'],
+    mcc: ['mcc', 'mccormar', 'motorcontrolcenter'],
+    breaker: ['breaker', 'prekidac', 'acb', 'mccb', 'prekidacsnage'],
+    capacitor: ['capacitor', 'kompenzacija', 'kondenzatori', 'kondenzatorskabaterija'],
+    generator: ['generator', 'agregat', 'dizelagregat', 'dea'],
+    ups: ['ups', 'besprekidnonapajanje'],
+    battery: ['battery', 'baterija', 'akumulator', 'akumulatorskabaterija'],
+    plc: ['plc', 'upravljackiormar', 'automatika'],
+    cable: ['cable', 'kabl', 'kablovi', 'kablovskatrasa'],
+    lighting: ['lighting', 'rasveta', 'osvetljenje', 'svetiljka'],
+    grounding: ['grounding', 'uzemljenje', 'gromobran'],
+    heater: ['heater', 'grejac', 'elektricnigrejac'],
+    fan: ['fan', 'ventilator', 'duvaljka'],
+    crane: ['crane', 'dizalica', 'kran'],
+  };
+  for (const [id, list] of Object.entries(aliases)) if (list.includes(v)) return id;
+  const byTitle = getCatalog().find((c) => normalizeType(c.title) === v);
+  return byTitle ? byTitle.id : 'other';
 }
 
 // ---------- Stanje ----------
@@ -65,6 +84,8 @@ export const settings = {
 
 export async function loadAll() {
   const [eq, tasks, reports, photos] = await Promise.all(['equipment', 'tasks', 'reports', 'photos'].map(db.getAll));
+  const catalog = await db.getAll('catalog').catch(() => []);
+  setCatalogRecords(catalog);
   for (const m of Object.values(S)) m.clear();
   eq.forEach((x) => S.equipment.set(x.id, x));
   tasks.forEach((x) => S.tasks.set(x.id, x));
@@ -112,6 +133,18 @@ export async function saveEquipment(e) { S.equipment.set(e.id, e); await db.put(
 export async function saveTask(t) { S.tasks.set(t.id, t); await db.put('tasks', t); }
 export async function saveReport(r) { S.reports.set(r.id, r); await db.put('reports', r); persistOnce(); }
 export async function savePhotoMeta(p) { S.photos.set(p.id, p); await db.put('photos', p); }
+
+// ---------- Katalog (sopstvene dopune) ----------
+
+export async function saveCatalogRecord(rec) {
+  await db.put('catalog', rec);
+  setCatalogRecords([...(await db.getAll('catalog'))]);
+}
+export async function deleteCatalogRecord(id) {
+  await db.batch([{ store: 'catalog', del: id }]);
+  setCatalogRecords([...(await db.getAll('catalog'))]);
+}
+export const catalogRecordsAll = () => db.getAll('catalog');
 
 export function newEquipment() {
   return {

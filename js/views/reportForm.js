@@ -11,6 +11,7 @@ import { icon } from '../icons.js';
 import { esc, fmtDate, daysWord, debounce, nowISO, autoGrow, isoDateTime, parseDate } from '../util.js';
 import { photoButtons, bindPhotoInputs, cameraHelp } from './photoInput.js';
 import { openViewer } from './viewer.js';
+import { catalogType } from '../catalog.js';
 
 const MAX_PHOTOS = 10;
 const LABEL_SHORT = { before: 'PRE', after: 'POSLE', other: 'OSTALO' };
@@ -56,6 +57,7 @@ export function reportFormView(id, isNew) {
         ${textarea('findings', 'Nalaz', 'Šta je utvrđeno na licu mesta')}
         ${textarea('actions', 'Preduzete mere', 'Šta je urađeno')}
         ${textarea('parts', 'Utrošeni delovi', 'Naziv, količina, šifra')}
+        <div data-part-chips></div>
       </div>
       <h2 class="section-title">Trajanje i tehničar</h2>
       <div class="group">
@@ -113,8 +115,18 @@ export function reportFormView(id, isNew) {
     hydratePhotos(box);
   };
 
+  const renderPartChips = () => {
+    const eq = S.equipment.get(r.equipmentId);
+    const parts = eq ? catalogType(eq.type).partNames : [];
+    root.querySelector('[data-part-chips]').innerHTML = parts.length
+      ? `<div style="padding:4px 16px 12px"><div class="small muted strong">Dodaj deo (dodir upisuje u listu):</div>
+          <div class="chips wrap">${parts.map((p) => `<button type="button" class="chip" data-part="${esc(p)}">${icon('plus')}${esc(p)}</button>`).join('')}</div></div>`
+      : '';
+  };
+
   renderEqError();
   renderTask();
+  renderPartChips();
   renderPhotos();
 
   // ---------- Unos ----------
@@ -137,6 +149,7 @@ export function reportFormView(id, isNew) {
       if (task && task.equipmentId !== r.equipmentId) r.taskId = null;
       renderEqError();
       renderTask();
+      renderPartChips();
       autosave();
     } else if (t.name === 'taskId') {
       r.taskId = t.value || null;
@@ -224,6 +237,18 @@ export function reportFormView(id, isNew) {
       const m = +add.dataset.addMin;
       r.durationMinutes = m === 0 ? 0 : (r.durationMinutes || 0) + m;
       root.querySelector('[name="durationMinutes"]').value = r.durationMinutes || '';
+      autosave();
+      return;
+    }
+    const part = e.target.closest('[data-part]');
+    if (part) {
+      const line = `${part.dataset.part} – 1 kom`;
+      const cur = (r.parts || '').replace(/\s+$/, '');
+      r.parts = cur ? `${cur}\n${line}` : line;
+      const ta = root.querySelector('textarea[name="parts"]');
+      ta.value = r.parts;
+      autoGrow(ta);
+      toast(`Upisano: ${part.dataset.part}`, 1400);
       autosave();
       return;
     }

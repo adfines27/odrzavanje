@@ -40,6 +40,29 @@ export function track(hash) {
 
 export const currentHash = () => location.hash || '#/';
 
+/**
+ * Raspored ekrana: sve osim donje trake (.actionbar) ide u .scroller koji se skroluje,
+ * a traka ostaje ispod njega. Ostaje isti element, pa rukovaoci događaja i dalje rade.
+ */
+export function layoutView(root) {
+  const oldScroller = root.querySelector(':scope > .scroller');
+  const keep = oldScroller ? oldScroller.scrollTop : 0;
+  root.classList.add('view-root');
+  const nodes = [...root.childNodes];
+  const bar = nodes.find((n) => n.nodeType === 1 && n.classList.contains('actionbar'));
+  const scroller = document.createElement('div');
+  scroller.className = 'scroller';
+  for (const n of nodes) {
+    if (n === bar) continue;
+    if (n === oldScroller) { while (n.firstChild) scroller.appendChild(n.firstChild); n.remove(); }
+    else scroller.appendChild(n);
+  }
+  root.replaceChildren(scroller);
+  if (bar) root.appendChild(bar);
+  scroller.scrollTop = keep;
+  return scroller;
+}
+
 export function el(html) {
   const div = document.createElement('div');
   div.innerHTML = html;

@@ -36,13 +36,17 @@ export function settingsView() {
       <p class="section-footer">Pravi kalendarski fajl sa svim rokovima iz plana. Kalendar vas podseća u 08:00 na dan roka i u 08:00 dan ranije, i bez interneta.
         Posle izmene plana izvezite ponovo i obrišite stare događaje u kalendaru.</p>
 
+      <h2 class="section-title">Katalog</h2>
+      <div class="group"><a class="row strong" href="#/katalog" style="color:var(--accent)">${icon('book')}<span class="row-main">Katalog opreme i rezervnih delova</span>${icon('chevronRight', 'chev')}</a></div>
+      <p class="section-footer">23 tipa industrijske elektro opreme sa preporučenim planom održavanja i tipičnim delovima. Možete dodati sopstvene tipove, zadatke i delove.</p>
+
       <h2 class="section-title">Uvoz opreme</h2>
       <div class="group">
         <label class="row strong" for="file-csv" role="button" style="color:var(--accent)">${icon('upload')}<span class="row-main">Uvezi opremu iz CSV fajla</span></label>
         ${button('data-template', 'table', 'Preuzmi šablon CSV fajla')}
       </div>
       <p class="section-footer">Kolone: ${esc(TEMPLATE_HEADER.replace(/;/g, '; '))}. Separator zarez ili tačka-zarez.
-        Tip: motor, pumpa, vfd, ventil, instrument, ostalo. Postojeća oprema (ista oznaka) se ažurira.</p>
+        Tip: naziv iz kataloga ili kratko (motor, vfd, softstarter, transformator, ormar, mcc, prekidač, agregat, ups, baterija, plc, kabl, rasveta, uzemljenje, pumpa, ventilator…). Postojeća oprema (ista oznaka) se ažurira.</p>
 
       <h2 class="section-title">Rezervna kopija</h2>
       <div class="group">

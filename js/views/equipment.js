@@ -1,19 +1,20 @@
 // Oprema: lista sa pretragom i filterima, detalji, forma opreme i forma zadatka iz plana.
 
 import {
-  S, EQUIPMENT_TYPES, equipmentType, equipmentSorted, tasksOf, reportsOf, nextDue, dueState, daysUntil, worstState,
+  S, equipmentType, equipmentSorted, tasksOf, reportsOf, nextDue, dueState, daysUntil, worstState,
   DUE, newEquipment, saveEquipment, deleteEquipment, tagExists, newTask, saveTask, deleteTask, addPhoto, deletePhoto,
   newDraftReport,
 } from '../store.js';
-import { el, go, back, rerender } from '../router.js';
+import { el, go, back, rerender, layoutView } from '../router.js';
 import {
   navBar, largeTitle, actionBar, dueBadge, emptyState, confirmDialog, toast, thumbImg, hydratePhotos,
 } from '../ui.js';
 import { icon } from '../icons.js';
 import {
-  esc, fmtDate, fmtPower, fmtNumber, parseDecimal, matches, daysWord, dueText, parseDate, isoDate, addDays, startOfDay, reportsWord,
+  esc, tasksWord, fmtDate, fmtPower, fmtNumber, parseDecimal, matches, daysWord, dueText, parseDate, isoDate, addDays, startOfDay, reportsWord,
 } from '../util.js';
 import { photoButtons, bindPhotoInputs, cameraHelp } from './photoInput.js';
+import { catalogType, typeOptionsHTML, missingTasks } from '../catalog.js';
 import { reportRow } from './reports.js';
 import { openSinglePhoto } from './viewer.js';
 
@@ -42,14 +43,14 @@ export function equipmentListView() {
   if (listState.area && !areas.includes(listState.area)) listState.area = '';
 
   const root = el(`
-    ${navBar({ title: 'Oprema' })}
+    ${navBar({ title: 'Oprema', right: `<a class="nav-btn" href="#/katalog">${icon('book')}Katalog</a>` })}
     ${largeTitle('Oprema')}
     <div class="page">
       <label class="search">${icon('search')}<input type="search" id="eq-q" placeholder="Oznaka, naziv, lokacija…" value="${esc(listState.q)}" enterkeyhint="search" autocomplete="off" aria-label="Pretraga opreme"></label>
       <div class="filters">
         <div class="select-pill ${listState.type ? 'active' : ''}"><select id="eq-type" aria-label="Filter po tipu">
           <option value="">Svi tipovi</option>
-          ${EQUIPMENT_TYPES.map((t) => `<option value="${t.id}" ${listState.type === t.id ? 'selected' : ''}>${esc(t.title)}</option>`).join('')}
+          ${typeOptionsHTML(listState.type, esc)}
         </select></div>
         <div class="select-pill ${listState.area ? 'active' : ''}"><select id="eq-area" aria-label="Filter po lokaciji">
           <option value="">Sve lokacije</option>
@@ -119,6 +120,8 @@ export function equipmentDetailView(id) {
   const tasks = tasksOf(id);
   const reports = reportsOf(id);
   const state = worstState(id, now);
+  const cat = catalogType(e.type);
+  const missing = missingTasks(e.type, tasks);
 
   const root = el(`
     ${navBar({ title: e.tag, back: { label: 'Nazad', fallback: '#/oprema' },
@@ -144,10 +147,18 @@ export function equipmentDetailView(id) {
       </div>
 
       <h2 class="section-title">Plan održavanja</h2>
+      ${missing.length ? `<a class="banner info" href="#/oprema/${id}/preporuceni-plan" style="margin:0 0 10px">${icon('book')}
+          <div class="row-main"><div class="strong">${tasks.length ? 'Dopuni plan iz kataloga' : 'Dodaj preporučeni plan'}</div>
+          <div class="small muted">${tasksWord(missing.length)} za tip „${esc(cat.title)}”</div></div>
+          <span class="chev">${icon('chevronRight')}</span></a>` : ''}
       <div class="group">
         ${tasks.length ? tasks.map((x) => taskRow(x, now)).join('') : '<div class="row muted">Još nema zadataka u planu.</div>'}
         <a class="row strong" href="#/oprema/${id}/zadatak" style="color:var(--accent)">${icon('plus')}Dodaj zadatak u plan</a>
       </div>
+      ${cat.parts.length ? `<h2 class="section-title">Tipični rezervni delovi</h2>
+        <div class="group"><details class="parts-list"><summary class="row strong">${icon('parts')}<span class="row-main">${cat.parts.length} delova za tip „${esc(cat.title)}”</span>${icon('chevronRight', 'chev')}</summary>
+          <ul>${cat.partNames.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></details></div>
+        <p class="section-footer">Delovi se nude za brzi upis u izveštaj, u polju „Utrošeni delovi”.</p>` : ''}
 
       <h2 class="section-title">Istorija izveštaja (${reports.length})</h2>
       <div class="group">
@@ -197,6 +208,7 @@ export function equipmentFormView(id) {
   const root = el('');
   const render = () => {
     const err = attempted ? errors() : { tag: '', name: '', power: Number.isNaN(parseDecimal(powerText)) ? 'Unesite broj, npr. 15,5' : '' };
+    const prevTop = root.querySelector('.scroller')?.scrollTop || 0;
     root.innerHTML = `
       ${navBar({ title: existing ? 'Izmena opreme' : 'Nova oprema', alwaysTitle: true,
         left: '<button type="button" class="nav-btn" data-cancel>Otkaži</button>',
@@ -206,7 +218,7 @@ export function equipmentFormView(id) {
         <div class="group">
           ${field('Oznaka (tag)', `<input name="tag" value="${esc(draft.tag)}" placeholder="npr. M-101" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="next">`, { error: err.tag })}
           ${field('Naziv', `<input name="name" value="${esc(draft.name)}" placeholder="npr. Elektromotor glavne pumpe" enterkeyhint="next">`, { error: err.name })}
-          ${field('Tip', `<select name="type">${EQUIPMENT_TYPES.map((t) => `<option value="${t.id}" ${draft.type === t.id ? 'selected' : ''}>${esc(t.title)}</option>`).join('')}</select>`)}
+          ${field('Tip', `<select name="type">${typeOptionsHTML(draft.type, esc)}</select>`)}
           ${field('Lokacija / oblast', `<input name="area" value="${esc(draft.area)}" placeholder="npr. Pumpna stanica 1" list="areas" enterkeyhint="next">
             <datalist id="areas">${[...new Set(equipmentSorted().map((x) => x.area).filter(Boolean))].map((a) => `<option value="${esc(a)}">`).join('')}</datalist>`)}
         </div>
@@ -235,6 +247,7 @@ export function equipmentFormView(id) {
           <p class="section-footer">Brišu se i plan održavanja, svi izveštaji i fotografije ove opreme.</p>` : ''}
       </div>
       ${actionBar(`<button type="button" class="btn btn-primary btn-block" data-save>${icon('check')}Sačuvaj</button>`)}`;
+    if (root.isConnected) layoutView(root).scrollTop = prevTop;
     hydratePhotos(root);
     root.querySelectorAll('textarea').forEach((ta) => { ta.style.height = 'auto'; ta.style.height = `${Math.max(ta.scrollHeight, 80)}px`; });
   };

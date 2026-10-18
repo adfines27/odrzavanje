@@ -2,14 +2,22 @@
 // da se pri pokretanju učitavaju samo podaci, a slike tek kad zatrebaju.
 
 const DB_NAME = 'elektro-odrzavanje';
-const VERSION = 1;
-export const STORES = ['equipment', 'tasks', 'reports', 'photos', 'photoData'];
+const VERSION = 2;
+export const STORES = ['equipment', 'tasks', 'reports', 'photos', 'photoData', 'catalog'];
 
 let dbPromise = null;
+let blockedListener = null;
+
+/** Poziva se kad nadogradnju baze drži otvorena starija verzija (druga kartica / prozor). */
+export const onDBBlocked = (fn) => { blockedListener = fn; };
 
 export function openDB() {
   if (!dbPromise) {
     dbPromise = new Promise((resolve, reject) => {
+      if (!('indexedDB' in window) || !window.indexedDB) {
+        reject(new Error('Ovaj pregledač ne podržava lokalnu bazu (IndexedDB).'));
+        return;
+      }
       const req = indexedDB.open(DB_NAME, VERSION);
       req.onupgradeneeded = () => {
         const db = req.result;
@@ -22,9 +30,11 @@ export function openDB() {
         db.onversionchange = () => db.close();
         resolve(db);
       };
-      req.onerror = () => reject(req.error);
-      req.onblocked = () => reject(new Error('Baza je zauzeta. Zatvorite druge prozore aplikacije.'));
+      req.onerror = () => reject(req.error || new Error('Baza ne može da se otvori.'));
+      // Nije greška: nadogradnja čeka da se stara verzija zatvori, pa se sama nastavlja.
+      req.onblocked = () => blockedListener?.();
     });
+    dbPromise.catch(() => { dbPromise = null; });
   }
   return dbPromise;
 }

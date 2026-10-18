@@ -1,6 +1,6 @@
 // Service worker: čuva celu aplikaciju na uređaju, pa radi i bez interneta.
 // Posle svake izmene fajlova povećajte VERSION da bi telefoni preuzeli novu verziju.
-const VERSION = '1.0.0';
+const VERSION = '1.2.1';
 const CACHE = `elektro-odrzavanje-${VERSION}`;
 const ASSETS = [
   './',
@@ -11,6 +11,7 @@ const ASSETS = [
   'index.html',
   'js/app.js',
   'js/backup.js',
+  'js/catalog.js',
   'js/csv.js',
   'js/db.js',
   'js/icons.js',
@@ -22,6 +23,7 @@ const ASSETS = [
   'js/store.js',
   'js/ui.js',
   'js/util.js',
+  'js/views/catalog.js',
   'js/views/equipment.js',
   'js/views/home.js',
   'js/views/photoInput.js',
@@ -34,7 +36,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {

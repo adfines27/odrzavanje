@@ -57,10 +57,12 @@ html { font-size: 17px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 
+/* Okvir aplikacije ima fiksnu visinu i ne skroluje se; skroluje se samo sadržaj (.scroller).
+   Tako meni i dugmad na dnu ostaju vidljivi i u aplikaciji sa početnog ekrana na iOS-u. */
+html, body { height: 100%; overflow: hidden; }
+
 body {
   margin: 0;
-  min-height: 100vh;
-  min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
@@ -69,7 +71,19 @@ body {
   overscroll-behavior-y: none;
 }
 
-body.modal-open { overflow: hidden; }
+#shell {
+  display: flex; flex-direction: column;
+  height: 100dvh;
+  height: var(--app-h, 100dvh);
+  overflow: hidden;
+}
+#view { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.view-root { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.scroller {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding-bottom: 28px;
+}
 
 a { color: var(--accent); text-decoration: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -88,12 +102,6 @@ button { cursor: pointer; }
 
 /* ---------- Glavni raspored ---------- */
 
-#view {
-  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px);
-}
-body.has-actionbar #view {
-  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 96px);
-}
 body.no-tabbar { --tabbar-h: 0px; }
 body.no-tabbar .tabbar { display: none; }
 
@@ -140,7 +148,7 @@ body.no-tabbar .tabbar { display: none; }
 /* ---------- Tab bar ---------- */
 
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  flex: none; position: relative; z-index: 40;
   display: flex; justify-content: space-around;
   padding-bottom: env(safe-area-inset-bottom);
   background: var(--bar);
@@ -159,15 +167,14 @@ body.no-tabbar .tabbar { display: none; }
 /* ---------- Traka sa glavnom akcijom (dole, nadohvat palca) ---------- */
 
 .actionbar {
-  position: fixed; left: 0; right: 0; z-index: 35;
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  flex: none; position: relative; z-index: 35;
   padding: 10px 16px;
   background: var(--bar);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
   border-top: 0.5px solid var(--sep);
 }
-body.no-tabbar .actionbar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); bottom: 0; }
+body.no-tabbar .actionbar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
 .actionbar-inner { max-width: 760px; margin: 0 auto; display: flex; gap: 10px; }
 .actionbar .hint { text-align: center; color: var(--text-3); font-size: 0.75rem; margin-top: 6px; }
 
@@ -397,7 +404,7 @@ html[data-large-text] .counters { grid-template-columns: 1fr; }
 /* ---------- Dijalozi, listovi, obaveštenja ---------- */
 
 .backdrop {
-  position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, 0.45);
+  position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100dvh); z-index: 90; background: rgba(0, 0, 0, 0.45);
   display: flex; align-items: center; justify-content: center;
   padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
   animation: fade 0.15s ease-out;
@@ -422,7 +429,7 @@ html[data-large-text] .counters { grid-template-columns: 1fr; }
 }
 
 .busy {
-  position: fixed; inset: 0; z-index: 110; display: grid; place-items: center; background: rgba(0, 0, 0, 0.25);
+  position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100dvh); z-index: 110; display: grid; place-items: center; background: rgba(0, 0, 0, 0.25);
 }
 .busy > div {
   display: flex; gap: 12px; align-items: center; padding: 18px 22px; border-radius: 14px;
@@ -432,7 +439,7 @@ html[data-large-text] .counters { grid-template-columns: 1fr; }
 /* ---------- Pregled fotografija preko celog ekrana ---------- */
 
 .viewer {
-  position: fixed; inset: 0; z-index: 100; background: #000; color: #fff;
+  position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100dvh); z-index: 100; background: #000; color: #fff;
   display: flex; flex-direction: column;
 }
 .viewer-top {
@@ -471,6 +478,21 @@ html[data-large-text] .counters { grid-template-columns: 1fr; }
   background: rgba(255, 255, 255, 0.14); color: #fff; resize: none; font-size: max(16px, 1rem);
 }
 .viewer-bottom textarea::placeholder { color: rgba(255, 255, 255, 0.6); }
+
+.chips.wrap { flex-wrap: wrap; overflow: visible; }
+.chips.wrap .chip { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 6px 12px; font-size: 0.92rem; text-align: left; flex: 0 1 auto; max-width: 100%; white-space: normal; border-radius: 22px; }
+.chips.wrap .chip .icon { width: 1em; height: 1em; }
+
+details.parts-list > summary { list-style: none; cursor: pointer; }
+details.parts-list > summary::-webkit-details-marker { display: none; }
+details.parts-list[open] > summary .chev { transform: rotate(90deg); }
+details.parts-list ul { margin: 6px 0 12px; padding: 0 16px 0 36px; }
+details.parts-list li { padding: 4px 0; }
+details.parts-list > ul { border-bottom: 0.5px solid var(--sep); }
+.cat-body { padding: 8px 16px 4px; border-bottom: 0.5px solid var(--sep); }
+.cat-body ul { padding-left: 20px; }
+.check-row { cursor: pointer; }
+.check-row input[type="checkbox"] { width: 26px; height: 26px; flex: none; accent-color: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

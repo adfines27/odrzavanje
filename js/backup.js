@@ -1,7 +1,7 @@
 // Rezervna kopija: ZIP sa podaci.json, oprema.csv i folderom Fotografije. Može i da se vrati.
 
 import * as db from './db.js';
-import { S, loadAll, wipeAll } from './store.js';
+import { S, loadAll, wipeAll, catalogRecordsAll } from './store.js';
 import { makeZip, readZip } from './zip.js';
 import { exportEquipmentCSV } from './csv.js';
 import { nowISO } from './util.js';
@@ -17,6 +17,7 @@ export async function makeBackup() {
     equipment: [...S.equipment.values()],
     tasks: [...S.tasks.values()],
     reports: [...S.reports.values()],
+    catalog: await catalogRecordsAll(),
     photos: photos.map((p) => ({ ...p, file: `Fotografije/${p.id}.jpg`, thumbFile: `Fotografije/${p.id}_t.jpg` })),
   };
   const entries = [
@@ -52,6 +53,7 @@ export async function restoreBackup({ files, data }) {
   for (const e of data.equipment || []) ops.push({ store: 'equipment', put: e });
   for (const t of data.tasks || []) ops.push({ store: 'tasks', put: t });
   for (const r of data.reports || []) ops.push({ store: 'reports', put: r });
+  for (const c of data.catalog || []) ops.push({ store: 'catalog', put: c });
   await db.batch(ops);
   let restoredPhotos = 0;
   for (const p of data.photos || []) {

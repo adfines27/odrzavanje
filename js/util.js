@@ -88,6 +88,13 @@ export function reportsWord(n) {
   if (last === 1 && a !== 11) return `${n} izveštaj`;
   return `${n} izveštaja`;
 }
+export function tasksWord(n) {
+  const a = n % 100;
+  const last = n % 10;
+  if (last === 1 && a !== 11) return `${n} zadatak`;
+  if (last >= 2 && last <= 4 && !(a >= 12 && a <= 14)) return `${n} zadatka`;
+  return `${n} zadataka`;
+}
 export function dueText(days) {
   if (days < 0) return `Kasni ${daysWord(days)}`;
   if (days === 0) return 'Rok je danas';
