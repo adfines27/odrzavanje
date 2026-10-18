@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="sr-Latn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Elektro održavanje</title>
+  <meta name="description" content="Održavanje industrijske opreme i izveštaji sa fotografijama. Radi bez interneta.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Održavanje">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="stylesheet" href="css/app.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <main id="view" aria-live="polite">
+    <p class="boot">Učitavanje…</p>
+  </main>
+  <nav id="tabbar" class="tabbar" aria-label="Glavni meni"></nav>
+  <div id="overlays"></div>
+
+  <!-- Izvori fotografija. Dugmad su <label for="…"> jer to na iOS-u najpouzdanije otvara kameru i galeriju. -->
+  <input class="sr-only" type="file" id="file-camera" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+  <input class="sr-only" type="file" id="file-gallery" accept="image/*" multiple tabindex="-1" aria-hidden="true">
+  <input class="sr-only" type="file" id="file-csv" accept=".csv,text/csv,text/plain" tabindex="-1" aria-hidden="true">
+  <input class="sr-only" type="file" id="file-backup" accept=".zip,application/zip" tabindex="-1" aria-hidden="true">
+  <noscript>Za rad aplikacije potreban je JavaScript.</noscript>
+</body>
+</html>
